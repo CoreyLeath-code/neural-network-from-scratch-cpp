@@ -2,12 +2,11 @@
 #include <memory>
 #include <vector>
 
-// These paths are relative to the 'src' directory, 
-// which we will add to the include path in CMake.
-#include "impl/NeuralNet.hpp"
-#include "impl/DenseLayer.hpp"
-#include "impl/Activations.hpp"
-#include "impl/Losses.hpp"
+// Explicitly referencing the full path from the project root
+#include "src/impl/NeuralNet.hpp"
+#include "src/impl/DenseLayer.hpp"
+#include "src/impl/Activations.hpp"
+#include "src/impl/Losses.hpp"
 
 // ── DenseLayer & Activation Unit Tests ────────────────────────────────────────
 
