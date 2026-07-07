@@ -2,7 +2,8 @@
 #include <memory>
 #include <vector>
 
-// Updated to match your actual build log file structure (src/impl/)
+// These paths are relative to the 'src' directory, 
+// which we will add to the include path in CMake.
 #include "impl/NeuralNet.hpp"
 #include "impl/DenseLayer.hpp"
 #include "impl/Activations.hpp"
