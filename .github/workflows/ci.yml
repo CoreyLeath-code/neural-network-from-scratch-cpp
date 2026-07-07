@@ -5,26 +5,38 @@ on: [push, pull_request]
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    # This ensures every step runs from the root of the checked-out repo
+    defaults:
+      run:
+        working-directory: .
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Fix Apt Repositories & Install Dependencies
         run: |
-          # Remove problematic Microsoft/Azure repositories that cause signature errors
+          # Remove problematic Microsoft/Azure mirrors that cause signature failures
           sudo rm -f /etc/apt/sources.list.d/azure-cli.list
           sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
-          
-          # Now update and install
           sudo apt-get update
           sudo apt-get install -y cmake libgtest-dev clang-tidy valgrind
 
       - name: Build and Test
         run: |
-          # Use the dynamic find approach to guarantee we locate CMakeLists.txt
-          PROJECT_ROOT=$(find . -name "CMakeLists.txt" -exec dirname {} \;)
-          cmake -S "$PROJECT_ROOT" -B build
+          # 1. Clean build directory
+          rm -rf build
+          mkdir build
+          
+          # 2. Explicitly point CMake to the root directory where CMakeLists.txt resides
+          # -S . uses the current root directory as the source
+          # -B build sends build artifacts to the build folder
+          cmake -S . -B build
+          
+          # 3. Build the project using the build folder
           cmake --build build
+          
+          # 4. Execute tests from the build directory
           ./build/test_neural_network
 
       - name: Memory Safety (Valgrind)
@@ -33,5 +45,5 @@ jobs:
 
       - name: Static Analysis
         run: |
-          # -I. ensures all include paths starting from root are found
+          # Analyzes src/ files using the root as the include base
           clang-tidy src/*.cpp -header-filter=.* -- -I.
