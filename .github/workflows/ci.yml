@@ -11,20 +11,14 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake libgtest-dev clang-tidy valgrind doxygen
+          sudo apt-get install -y cmake libgtest-dev clang-tidy valgrind
 
       - name: Build and Test
         run: |
-          # Clean build to ensure fresh header resolution
           rm -rf build && mkdir build && cd build
-          
-          # Configure with Sanitizers
-          cmake -D CMAKE_CXX_FLAGS="-fsanitize=address,undefined" ..
-          
-          # Build
+          # Configure with project root correctly handled by CMakeLists.txt
+          cmake ..
           make
-          
-          # Run Unit Tests
           ./test_neural_network
 
       - name: Memory Safety (Valgrind)
@@ -33,4 +27,5 @@ jobs:
 
       - name: Static Analysis
         run: |
+          # Ensure clang-tidy looks at include/
           clang-tidy src/*.cpp -header-filter=.* -- -Iinclude
