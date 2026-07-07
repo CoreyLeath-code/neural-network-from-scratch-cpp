@@ -18,19 +18,14 @@ jobs:
 
       - name: Build and Test
         run: |
-          # 1. Dynamically locate the directory containing CMakeLists.txt
-          # This traverses the nested structure created by GitHub Actions
-          ROOT_DIR=$(find . -name "CMakeLists.txt" -exec dirname {} \; | head -n 1)
-          echo "CMakeLists.txt found in: $ROOT_DIR"
+          # Clean build
+          rm -rf build && mkdir build
           
-          # 2. Clean build and point CMake to the located directory
-          mkdir build
-          cmake -S "$ROOT_DIR" -B build
-          
-          # 3. Build
+          # Explicitly build from the root directory ('.')
+          cmake -S . -B build
           cmake --build build
           
-          # 4. Run tests
+          # Run the test executable
           ./build/test_neural_network
 
       - name: Memory Safety (Valgrind)
@@ -39,4 +34,4 @@ jobs:
 
       - name: Static Analysis
         run: |
-          clang-tidy src/*.cpp -header-filter=.* -- -I.
+          clang-tidy src/*.cpp -header-filter=.* -- -Isrc
