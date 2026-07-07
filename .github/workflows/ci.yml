@@ -1,4 +1,4 @@
-name: C++ CI/CD Pipeline
+name: C++ Professional CI Pipeline
 
 on: [push, pull_request]
 
@@ -8,14 +8,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install System Dependencies
-        run: sudo apt-get update && sudo apt-get install -y cmake libgtest-dev
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake libgtest-dev clang-tidy valgrind
 
-      - name: Build with CMake
+      - name: Static Analysis (Clang-Tidy)
+        run: |
+          # Run tidy on source files to catch unsafe practices
+          clang-tidy src/*.cpp -header-filter=.* -- -Iinclude
+
+      - name: Configure and Build
         run: |
           mkdir build && cd build
-          cmake ..
+          cmake -DCMAKE_CXX_COMPILER=g++ ..
           make
 
       - name: Run Unit Tests
         run: ./build/test_neural_network
+
+      - name: Memory Safety Check (Valgrind)
+        run: |
+          # Detects memory leaks and invalid memory accesses
+          valgrind --leak-check=full --error-exitcode=1 ./build/test_neural_network
