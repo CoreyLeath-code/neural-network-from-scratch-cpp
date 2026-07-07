@@ -4,28 +4,28 @@ project(NeuralNetworkCpp VERSION 1.0)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Enforce professional warning flags
+# Professional Warning Flags
 if(MSVC)
     add_compile_options(/W4 /WX)
 else()
     add_compile_options(-Wall -Wextra -Werror -pedantic)
 endif()
 
-# Discover source files
+# Discover all source files in src/
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
-# Define the core library
+# Define the library
 add_library(nn_core ${SOURCES})
 
-# PUBLIC: This ensures that any target linking to nn_core 
-# automatically inherits the 'src' directory as an include path.
-target_include_directories(nn_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
+# GLOBAL FIX: Add the project root as the include directory
+# This allows #include "src/impl/..." to be resolved correctly from anywhere
+target_include_directories(nn_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
 # Define the main executable
 add_executable(nn_main src/main.cpp)
 target_link_libraries(nn_main PRIVATE nn_core)
 
-# Define the testing suite
+# Testing setup
 enable_testing()
 find_package(GTest REQUIRED)
 include(GoogleTest)
