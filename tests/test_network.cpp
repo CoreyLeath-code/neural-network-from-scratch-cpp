@@ -1,10 +1,12 @@
 #include <gtest/gtest.h>
 #include <memory>
 #include <vector>
+
+// Assuming your directory structure is: include/core/NeuralNet.hpp
 #include "core/NeuralNet.hpp"
-#include "impl/DenseLayer.hpp"
-#include "impl/Activations.hpp"
-#include "impl/Losses.hpp"
+#include "core/DenseLayer.hpp"
+#include "core/Activations.hpp"
+#include "core/Losses.hpp"
 
 // ── DenseLayer & Activation Unit Tests ────────────────────────────────────────
 
@@ -23,7 +25,6 @@ TEST(ActivationTest, ReLUFunctionality) {
 // ── NeuralNet Integration & Convergence Tests ─────────────────────────────────
 
 TEST(NeuralNetTest, ConvergenceTest) {
-    // Testing the ability of the network to learn a simple XOR-like pattern
     NeuralNet nn(std::make_unique<MSE>());
     nn.addLayer(std::make_unique<DenseLayer>(2, 4, 42));
     nn.addLayer(std::make_unique<DenseLayer>(4, 1, 43));
@@ -37,7 +38,6 @@ TEST(NeuralNetTest, ConvergenceTest) {
         }
     }
     
-    // Verify inference after training
     auto pred = nn.forward({0.0, 1.0});
     EXPECT_NEAR(pred[0], 1.0, 0.2); 
 }
