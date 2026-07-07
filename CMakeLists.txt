@@ -1,28 +1,32 @@
 cmake_minimum_required(VERSION 3.10)
 project(NeuralNetworkCpp VERSION 1.0)
 
-# Enforce C++17 for modern features
+# 1. Standard Enforcement
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Professional Warning Flags (L6 Standard)
+# 2. Professional Warning Flags (L6 Standard)
 if(MSVC)
     add_compile_options(/W4 /WX)
 else()
     add_compile_options(-Wall -Wextra -Werror -pedantic)
 endif()
 
-# Define Library
-add_library(nn_core src/network.cpp)
+# 3. Dynamic Source Discovery
+# This finds all .cpp files in src/ and include/ automatically
+file(GLOB_RECURSE SOURCES "src/*.cpp")
+file(GLOB_RECURSE HEADERS "include/*.hpp" "include/*.h")
+
+# 4. Library Definition
+add_library(nn_core ${SOURCES} ${HEADERS})
 target_include_directories(nn_core PUBLIC include)
 
-# Define Executable
+# 5. Executable Definition
 add_executable(nn_main src/main.cpp)
 target_link_libraries(nn_main PRIVATE nn_core)
-# Enable testing
-enable_testing()
 
-# Find GoogleTest
+# 6. Testing Framework (GoogleTest)
+enable_testing()
 find_package(GTest REQUIRED)
 include(GoogleTest)
 
