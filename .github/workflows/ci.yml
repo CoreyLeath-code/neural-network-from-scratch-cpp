@@ -18,14 +18,15 @@ jobs:
 
       - name: Build and Test
         run: |
-          # Clean build
-          rm -rf build && mkdir build
+          # Dynamically find the folder containing CMakeLists.txt
+          PROJECT_DIR=$(find . -name "CMakeLists.txt" -exec dirname {} \; | head -n 1)
+          echo "Building in: $PROJECT_DIR"
           
-          # Explicitly build from the root directory ('.')
-          cmake -S . -B build
+          # Configure and build using that directory
+          cmake -S "$PROJECT_DIR" -B build
           cmake --build build
           
-          # Run the test executable
+          # Run tests from the build directory
           ./build/test_neural_network
 
       - name: Memory Safety (Valgrind)
@@ -34,4 +35,5 @@ jobs:
 
       - name: Static Analysis
         run: |
-          clang-tidy src/*.cpp -header-filter=.* -- -Isrc
+          # Run clang-tidy
+          clang-tidy src/*.cpp -header-filter=.* -- -I.
