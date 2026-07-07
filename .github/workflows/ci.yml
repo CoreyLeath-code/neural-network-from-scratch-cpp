@@ -1,14 +1,21 @@
-name: C++ Tier 1 Build
+name: C++ CI/CD Pipeline
+
 on: [push, pull_request]
 
 jobs:
-  build:
+  build-and-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure CMake
-        run: cmake -B build -S .
+      - name: Install System Dependencies
+        run: sudo apt-get update && sudo apt-get install -y cmake libgtest-dev
 
-      - name: Build
-        run: cmake --build build
+      - name: Build with CMake
+        run: |
+          mkdir build && cd build
+          cmake ..
+          make
+
+      - name: Run Unit Tests
+        run: ./build/test_neural_network
