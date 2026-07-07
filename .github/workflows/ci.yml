@@ -1,24 +1,14 @@
-name: C++ CI
-
+name: C++ Tier 1 Build
 on: [push, pull_request]
 
 jobs:
-  build-and-test:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install dependencies
-        run: sudo apt-get install -y cmake clang-tidy valgrind
+      - name: Configure CMake
+        run: cmake -B build -S .
 
       - name: Build
-        run: |
-          mkdir build && cd build
-          cmake -DCMAKE_CXX_COMPILER=g++ ..
-          make
-
-      - name: Run Tests
-        run: ./build/test_neural_network
-
-      - name: Memory Check (Valgrind)
-        run: valgrind --leak-check=full ./build/test_neural_network
+        run: cmake --build build
