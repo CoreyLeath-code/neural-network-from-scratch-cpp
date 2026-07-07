@@ -1,33 +1,48 @@
-name: C++ Professional CI Pipeline
+name: NeuralNet Enterprise CI
 
 on: [push, pull_request]
 
 jobs:
-  build-and-test:
+  build-test-secure:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      # Tier 1 & 9: Infrastructure & Build Environment
       - name: Install Dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake libgtest-dev clang-tidy valgrind
-
+          sudo apt-get update && sudo apt-get install -y cmake libgtest-dev clang-tidy valgrind doxygen
+          
+      # Tier 3: Static Analysis
       - name: Static Analysis (Clang-Tidy)
-        run: |
-          # Run tidy on source files to catch unsafe practices
-          clang-tidy src/*.cpp -header-filter=.* -- -Iinclude
+        run: clang-tidy src/*.cpp -header-filter=.* -- -Iinclude
 
-      - name: Configure and Build
-        run: |
-          mkdir build && cd build
-          cmake -DCMAKE_CXX_COMPILER=g++ ..
-          make
+      # Tier 7: Compiler Sanitizers
+      - name: Configure (Sanitizers Enabled)
+        run: cmake -B build -D CMAKE_CXX_FLAGS="-fsanitize=address,undefined"
 
+      - name: Build
+        run: cmake --build build
+
+      # Tier 2: Unit Testing
       - name: Run Unit Tests
         run: ./build/test_neural_network
 
-      - name: Memory Safety Check (Valgrind)
+      # Tier 4: Memory Safety
+      - name: Memory Safety (Valgrind)
+        run: valgrind --leak-check=full --error-exitcode=1 ./build/test_neural_network
+
+      # Tier 5: Performance Benchmarking
+      - name: Performance Benchmarking
+        run: ./build/benchmark_nn --benchmark_format=json > results.json
+
+      # Tier 8: Security Audit
+      - name: Security Audit (OSV-Scanner)
         run: |
-          # Detects memory leaks and invalid memory accesses
-          valgrind --leak-check=full --error-exitcode=1 ./build/test_neural_network
+          curl -sSLo osv-scanner https://github.com/google/osv-scanner/releases/latest/download/osv-scanner_linux_amd64
+          chmod +x osv-scanner
+          ./osv-scanner -r .
+
+      # Tier 6: Documentation Generation
+      - name: Generate Doxygen Docs
+        run: doxygen Doxyfile
