@@ -9,28 +9,29 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # THIS STEP IS CRITICAL: It will show us the true path in the logs
-      - name: Debug File Tree
-        run: ls -R
-
-      - name: Install Dependencies
+      - name: Fix Apt Repositories & Install Dependencies
         run: |
+          # Remove problematic Microsoft/Azure repositories that cause signature errors
+          sudo rm -f /etc/apt/sources.list.d/azure-cli.list
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
+          
+          # Now update and install
           sudo apt-get update
           sudo apt-get install -y cmake libgtest-dev clang-tidy valgrind
 
       - name: Build and Test
         run: |
-          # The 'find' command will locate the directory containing CMakeLists.txt
+          # Use the dynamic find approach to guarantee we locate CMakeLists.txt
           PROJECT_ROOT=$(find . -name "CMakeLists.txt" -exec dirname {} \;)
-          echo "Found project root at: $PROJECT_ROOT"
-          
-          # Now we use that dynamic path to run cmake
           cmake -S "$PROJECT_ROOT" -B build
           cmake --build build
-          
-          # Run tests
           ./build/test_neural_network
 
       - name: Memory Safety (Valgrind)
         run: |
           valgrind --leak-check=full --error-exitcode=1 ./build/test_neural_network
+
+      - name: Static Analysis
+        run: |
+          # -I. ensures all include paths starting from root are found
+          clang-tidy src/*.cpp -header-filter=.* -- -I.
