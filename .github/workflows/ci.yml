@@ -18,10 +18,21 @@ jobs:
 
       - name: Build and Test
         run: |
-          rm -rf build && mkdir build
-          # This now works because CMakeLists.txt is at the root
-          cmake -S . -B build
+          # 1. Dynamically find the directory containing CMakeLists.txt
+          # This handles any nested structure created by actions/checkout
+          PROJECT_ROOT=$(find . -name "CMakeLists.txt" -exec dirname {} \; | head -n 1)
+          echo "Building from project root: $PROJECT_ROOT"
+          
+          # 2. Build in a dedicated directory
+          mkdir build
+          
+          # 3. Configure using the found project root
+          cmake -S "$PROJECT_ROOT" -B build
+          
+          # 4. Build
           cmake --build build
+          
+          # 5. Run tests (adjusting for build directory path)
           ./build/test_neural_network
 
       - name: Memory Safety (Valgrind)
