@@ -19,4 +19,5 @@ target_link_libraries(test_neural_network PRIVATE nn_core GTest::gtest_main)
 enable_testing()
 find_package(GTest REQUIRED)
 include(GoogleTest)
-gtest_discover_tests(test_neural_network)
+# Change this line:
+target_include_directories(nn_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src")
