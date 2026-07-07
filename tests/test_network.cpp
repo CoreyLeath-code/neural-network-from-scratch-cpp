@@ -2,11 +2,11 @@
 #include <memory>
 #include <vector>
 
-// Assuming your directory structure is: include/core/NeuralNet.hpp
-#include "core/NeuralNet.hpp"
-#include "core/DenseLayer.hpp"
-#include "core/Activations.hpp"
-#include "core/Losses.hpp"
+// Updated to match your actual build log file structure (src/impl/)
+#include "impl/NeuralNet.hpp"
+#include "impl/DenseLayer.hpp"
+#include "impl/Activations.hpp"
+#include "impl/Losses.hpp"
 
 // ── DenseLayer & Activation Unit Tests ────────────────────────────────────────
 
