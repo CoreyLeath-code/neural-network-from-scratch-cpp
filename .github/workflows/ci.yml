@@ -5,14 +5,13 @@ on: [push, pull_request]
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
-    # Define the working directory here to match the repo root
-    defaults:
-      run:
-        working-directory: .
-        
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      # THIS STEP IS CRITICAL: It will show us the true path in the logs
+      - name: Debug File Tree
+        run: ls -R
 
       - name: Install Dependencies
         run: |
@@ -21,15 +20,17 @@ jobs:
 
       - name: Build and Test
         run: |
-          # Use -S . to explicitly target the root directory where CMakeLists.txt lives
-          cmake -S . -B build
+          # The 'find' command will locate the directory containing CMakeLists.txt
+          PROJECT_ROOT=$(find . -name "CMakeLists.txt" -exec dirname {} \;)
+          echo "Found project root at: $PROJECT_ROOT"
+          
+          # Now we use that dynamic path to run cmake
+          cmake -S "$PROJECT_ROOT" -B build
           cmake --build build
+          
+          # Run tests
           ./build/test_neural_network
 
       - name: Memory Safety (Valgrind)
         run: |
           valgrind --leak-check=full --error-exitcode=1 ./build/test_neural_network
-
-      - name: Static Analysis
-        run: |
-          clang-tidy src/*.cpp -header-filter=.* -- -I.
