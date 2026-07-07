@@ -6,7 +6,8 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
       - name: Install Dependencies
         run: |
@@ -15,11 +16,14 @@ jobs:
 
       - name: Build and Test
         run: |
-          rm -rf build && mkdir build && cd build
-          # Configure with project root correctly handled by CMakeLists.txt
-          cmake ..
-          make
-          ./test_neural_network
+          # Use modern path-agnostic CMake commands
+          # -S . points to the source directory (root)
+          # -B build points to the output directory
+          cmake -S . -B build
+          cmake --build build
+          
+          # Run the test executable directly from the build directory
+          ./build/test_neural_network
 
       - name: Memory Safety (Valgrind)
         run: |
@@ -27,5 +31,6 @@ jobs:
 
       - name: Static Analysis
         run: |
-          # Ensure clang-tidy looks at include/
-          clang-tidy src/*.cpp -header-filter=.* -- -Iinclude
+          # Run clang-tidy from the project root
+          # -I. ensures all include paths starting from root are found
+          clang-tidy src/*.cpp -header-filter=.* -- -I.
