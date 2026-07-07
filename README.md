@@ -43,6 +43,17 @@ CI/CD pipeline validation
 
 This repository emphasizes engineering rigor, not just algorithmic implementation.
 
+
+/neural-network-from-scratch-cpp
+├── CMakeLists.txt      # The "Brain" of your build
+├── src/
+│   ├── main.cpp
+│   └── network.cpp
+├── include/
+│   └── network.h
+└── tests/
+    └── test_network.cpp
+
 🏗 Architecture
 Diagram is not supported.
 Core Components
