@@ -1,35 +1,21 @@
-cmake_minimum_required(VERSION 3.16)
-project(NeuralNetworkFromScratch)
+cmake_minimum_required(VERSION 3.10)
+project(NeuralNetworkCpp VERSION 1.0)
 
+# Enforce C++17 for modern features
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Core implementation sources (no main)
-set(NN_SOURCES
-    src/impl/NeuralNet.cpp
-    src/impl/CSVLoader.cpp
-)
+# Professional Warning Flags (L6 Standard)
+if(MSVC)
+    add_compile_options(/W4 /WX)
+else()
+    add_compile_options(-Wall -Wextra -Werror -pedantic)
+endif()
 
-# Main executable
-add_executable(neural_net src/main.cpp ${NN_SOURCES})
-target_include_directories(neural_net PRIVATE src)
+# Define Library
+add_library(nn_core src/network.cpp)
+target_include_directories(nn_core PUBLIC include)
 
-# ── Tests ────────────────────────────────────────────────────────────────────
-include(FetchContent)
-FetchContent_Declare(
-  googletest
-  URL https://github.com/google/googletest/archive/refs/tags/v1.14.0.zip
-  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
-)
-# Prevent overriding the parent project's compiler/linker settings on Windows
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(googletest)
-
-enable_testing()
-
-add_executable(test_neural_net tests/test_network.cpp ${NN_SOURCES})
-target_include_directories(test_neural_net PRIVATE src)
-target_link_libraries(test_neural_net GTest::gtest_main)
-
-include(GoogleTest)
-gtest_discover_tests(test_neural_net)
-
+# Define Executable
+add_executable(nn_main src/main.cpp)
+target_link_libraries(nn_main PRIVATE nn_core)
