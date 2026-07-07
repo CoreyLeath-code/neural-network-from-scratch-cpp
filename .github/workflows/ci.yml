@@ -5,6 +5,11 @@ on: [push, pull_request]
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    # Define the working directory here to match the repo root
+    defaults:
+      run:
+        working-directory: .
+        
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -16,13 +21,9 @@ jobs:
 
       - name: Build and Test
         run: |
-          # Use modern path-agnostic CMake commands
-          # -S . points to the source directory (root)
-          # -B build points to the output directory
+          # Use -S . to explicitly target the root directory where CMakeLists.txt lives
           cmake -S . -B build
           cmake --build build
-          
-          # Run the test executable directly from the build directory
           ./build/test_neural_network
 
       - name: Memory Safety (Valgrind)
@@ -31,6 +32,4 @@ jobs:
 
       - name: Static Analysis
         run: |
-          # Run clang-tidy from the project root
-          # -I. ensures all include paths starting from root are found
           clang-tidy src/*.cpp -header-filter=.* -- -I.
