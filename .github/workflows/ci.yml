@@ -1,34 +1,90 @@
 name: NeuralNet Enterprise CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - main
+      - master
+      - develop
+  pull_request:
+    branches:
+      - "**"
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Code
+      #######################################################################
+      # Checkout Repository
+      #######################################################################
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
+      #######################################################################
+      # Install Dependencies
+      #######################################################################
       - name: Install Dependencies
         run: |
-          sudo rm -f /etc/apt/sources.list.d/azure-cli.list
-          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list
+          sudo rm -f /etc/apt/sources.list.d/azure-cli.list || true
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list || true
+
           sudo apt-get update
-          sudo apt-get install -y cmake libgtest-dev clang-tidy valgrind
 
-      - name: Build and Test
-        run: |
-          # 1. Build from the root of the repo, but point CMake to the src folder
-          cmake -S ./src -B build
-          cmake --build build
-          
-          # 2. Run tests
-          ./build/test_neural_network
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            ninja-build \
+            libgtest-dev \
+            clang-tidy \
+            valgrind
 
-      - name: Memory Safety (Valgrind)
+      #######################################################################
+      # Configure Project
+      #######################################################################
+      - name: Configure CMake
         run: |
-          valgrind --leak-check=full --error-exitcode=1 ./build/test_neural_network
+          cmake \
+            -S src \
+            -B build \
+            -DCMAKE_BUILD_TYPE=Release
 
-      - name: Static Analysis
+      #######################################################################
+      # Build
+      #######################################################################
+      - name: Build Project
         run: |
-          clang-tidy src/impl/*.cpp -header-filter=.* -- -Isrc
+          cmake --build build --parallel
+
+      #######################################################################
+      # Run Unit Tests
+      #######################################################################
+      - name: Run Tests
+        run: |
+          ctest \
+            --test-dir build \
+            --output-on-failure \
+            --verbose
+
+      #######################################################################
+      # Memory Analysis
+      #######################################################################
+      - name: Valgrind Memory Check
+        run: |
+          valgrind \
+            --leak-check=full \
+            --show-leak-kinds=all \
+            --track-origins=yes \
+            --error-exitcode=1 \
+            ./build/test_neural_network
+
+      #######################################################################
+      # Static Analysis
+      #######################################################################
+      - name: Run Clang-Tidy
+        run: |
+          find src -name "*.cpp" -print0 | while IFS= read -r -d '' file
+          do
+            echo "Checking $file"
+            clang-tidy "$file" -- -Isrc
+          done
