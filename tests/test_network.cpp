@@ -2,7 +2,7 @@
 #include <memory>
 #include <vector>
 
-// Explicit pathing from the project root
+// These paths are now relative to the project root
 #include "src/impl/NeuralNet.hpp"
 #include "src/impl/DenseLayer.hpp"
 #include "src/impl/Activations.hpp"
