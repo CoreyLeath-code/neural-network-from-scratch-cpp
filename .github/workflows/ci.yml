@@ -15,11 +15,14 @@ jobs:
 
       - name: Build and Test
         run: |
-          mkdir build && cd build
-          cmake ..
-          make
-          ./test_neural_network
+          # Use GITHUB_WORKSPACE to ensure we point to the repo root
+          cmake -S "$GITHUB_WORKSPACE" -B build
+          cmake --build build
+          
+          # Run the test executable
+          ./build/test_neural_network
 
       - name: Memory Safety (Valgrind)
         run: |
+          # Run valgrind to check for memory leaks
           valgrind --leak-check=full --error-exitcode=1 ./build/test_neural_network
