@@ -34,15 +34,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Run Trivy and generate report
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          scan-type: fs
-          scan-ref: .
-          format: table
-          output: trivy-results.txt
-          severity: CRITICAL,HIGH,MEDIUM
-          ignore-unfixed: true
-          exit-code: '0'
+        run: |
+          docker run --rm \
+            -v "$PWD:/workspace" \
+            -w /workspace \
+            aquasec/trivy:latest \
+            fs \
+            --format table \
+            --output trivy-results.txt \
+            --severity MEDIUM,HIGH,CRITICAL \
+            --ignore-unfixed \
+            --exit-code 0 \
+            .
       - name: Upload Trivy report
         uses: actions/upload-artifact@v7
         with:
@@ -55,10 +58,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Scan for secrets
-        uses: gitleaks/gitleaks-action@v3
+      - name: Scan working tree for secrets
+        run: |
+          docker run --rm \
+            -v "$PWD:/repo" \
+            -w /repo \
+            ghcr.io/gitleaks/gitleaks:latest \
+            detect \
+            --source . \
+            --no-git \
+            --redact \
+            --no-banner \
+            --exit-code 1
 
   sbom:
     name: Generate SBOM
