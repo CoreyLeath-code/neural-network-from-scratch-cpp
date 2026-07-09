@@ -4,14 +4,14 @@ project(NeuralNetworkCpp VERSION 1.0)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-# Discover sources in the src/ folder
+# Discover source files
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
-# Define library and include the project root so includes like "src/impl/..." work
+# Define library and map root for includes
 add_library(nn_core ${SOURCES})
 target_include_directories(nn_core PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
-# Define main executable
+# Executables
 add_executable(nn_main "src/main.cpp")
 target_link_libraries(nn_main PRIVATE nn_core)
 
