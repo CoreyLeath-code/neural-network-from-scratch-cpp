@@ -12,8 +12,7 @@ public:
     std::vector<double> forward(const std::vector<double>& input);
     void backward(const std::vector<double>& y_true, double lr);
     double train(const std::vector<double>& x,
-                 const std::vector<double>& y,
-                 double lr);
+                 const std::vector<double>& y, double lr);
 
 private:
     std::vector<std::unique_ptr<Layer>> layers;

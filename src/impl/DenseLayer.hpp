@@ -9,15 +9,16 @@ public:
     // a reproducible initialization (useful for testing and debugging).
     explicit DenseLayer(size_t in, size_t out, unsigned int seed = 0)
         : input_size(in), output_size(out) {
-        std::mt19937 gen(seed == 0
-                             ? std::random_device{}()
-                             : static_cast<std::mt19937::result_type>(seed));
+        std::mt19937 gen(seed == 0 ? std::random_device{}()
+                                    : static_cast<std::mt19937::result_type>(seed));
         std::uniform_real_distribution<> dis(-1.0, 1.0);
         weights.resize(out, std::vector<double>(in));
         bias.resize(out);
         for (auto& row : weights)
-            for (auto& w : row) w = dis(gen);
-        for (auto& b : bias) b = dis(gen);
+            for (auto& w : row)
+                w = dis(gen);
+        for (auto& b : bias)
+            b = dis(gen);
     }
 
     std::vector<double> forward(const std::vector<double>& input) override {
@@ -31,7 +32,8 @@ public:
         return out;
     }
 
-    std::vector<double> backward(const std::vector<double>& grad, double lr) override {
+    std::vector<double> backward(const std::vector<double>& grad,
+                                 double lr) override {
         std::vector<double> grad_input(input_size, 0.0);
         for (size_t i = 0; i < output_size; ++i) {
             for (size_t j = 0; j < input_size; ++j) {

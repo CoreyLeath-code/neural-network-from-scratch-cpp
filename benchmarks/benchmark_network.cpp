@@ -24,8 +24,11 @@ int main() {
     }
     const auto end = std::chrono::high_resolution_clock::now();
 
-    const auto elapsed_us = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-    const double avg_ns = static_cast<double>(elapsed_us) * 1000.0 / static_cast<double>(iterations);
+    const auto elapsed_us =
+        std::chrono::duration_cast<std::chrono::microseconds>(end - start)
+            .count();
+    const double avg_ns = static_cast<double>(elapsed_us) * 1000.0 /
+                          static_cast<double>(iterations);
 
     std::cout << "forward_iterations=" << iterations << '\n';
     std::cout << "total_us=" << elapsed_us << '\n';

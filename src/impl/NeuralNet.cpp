@@ -1,6 +1,7 @@
 #include "../core/NeuralNet.hpp"
 
-NeuralNet::NeuralNet(std::unique_ptr<Loss> loss) : lossFn(std::move(loss)) {}
+NeuralNet::NeuralNet(std::unique_ptr<Loss> loss)
+    : lossFn(std::move(loss)) {}
 
 void NeuralNet::addLayer(std::unique_ptr<Layer> layer) {
     layers.push_back(std::move(layer));
@@ -23,8 +24,7 @@ void NeuralNet::backward(const std::vector<double>& y_true, double lr) {
 }
 
 double NeuralNet::train(const std::vector<double>& x,
-                        const std::vector<double>& y,
-                        double lr) {
+                        const std::vector<double>& y, double lr) {
     forward(x);
     double loss = lossFn->compute(y, last_output);
     backward(y, lr);

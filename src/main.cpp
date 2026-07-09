@@ -15,7 +15,9 @@ int main() {
     nn.addLayer(std::make_unique<DenseLayer>(4, 1, 43));
 
     // XOR-like dataset (linearly separable approximation)
-    std::vector<std::vector<double>> X = {{0.1, 0.2}, {0.2, 0.3}, {0.8, 0.9}, {0.9, 0.8}};
+    std::vector<std::vector<double>> X = {
+        {0.1, 0.2}, {0.2, 0.3}, {0.8, 0.9}, {0.9, 0.8}
+    };
     std::vector<std::vector<double>> Y = {{0.0}, {0.0}, {1.0}, {1.0}};
 
     const int epochs = 500;
@@ -28,8 +30,8 @@ int main() {
             loss += nn.train(X[i], Y[i], lr);
         }
         if ((epoch + 1) % 100 == 0) {
-            std::cout << "Epoch " << (epoch + 1)
-                      << " | Loss: " << loss / static_cast<double>(X.size()) << "\n";
+            std::cout << "Epoch " << (epoch + 1) << " | Loss: "
+                      << loss / static_cast<double>(X.size()) << "\n";
         }
     }
 
