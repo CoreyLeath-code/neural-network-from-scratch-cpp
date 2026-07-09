@@ -1,37 +1,133 @@
 name: NeuralNet Enterprise CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   build-and-test:
+    name: Build and test (${{ matrix.compiler }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build libgtest-dev
+
+      - name: Select compiler
+        run: |
+          if [[ "${{ matrix.compiler }}" == "clang" ]]; then
+            echo "CC=clang" >> "$GITHUB_ENV"
+            echo "CXX=clang++" >> "$GITHUB_ENV"
+          else
+            echo "CC=gcc" >> "$GITHUB_ENV"
+            echo "CXX=g++" >> "$GITHUB_ENV"
+          fi
+
+      - name: Configure
+        run: cmake -S src -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --parallel
+
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+
+      - name: Package smoke test
+        run: cmake --build build --target package
+
+      - name: Upload package
+        if: matrix.compiler == 'gcc'
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-package
+          path: build/*.tar.gz
+          if-no-files-found: error
+
+  sanitizers:
+    name: ASan and UBSan
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Install Dependencies
+      - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake libgtest-dev
+          sudo apt-get install -y cmake ninja-build libgtest-dev
+      - name: Configure
+        run: cmake -S src -B build-sanitized -G Ninja -DCMAKE_BUILD_TYPE=Debug -DNN_ENABLE_SANITIZERS=ON
+      - name: Build
+        run: cmake --build build-sanitized --parallel
+      - name: Test
+        env:
+          ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: ctest --test-dir build-sanitized --output-on-failure
 
-      - name: Build and Test
+  valgrind:
+    name: Valgrind memory safety
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
         run: |
-          # Dynamically find the folder containing CMakeLists.txt
-          # This handles the nesting issue by searching the entire workspace
-          PROJECT_ROOT=$(find . -name "CMakeLists.txt" -exec dirname {} \; | head -n 1)
-          echo "Found project root at: $PROJECT_ROOT"
-          
-          # Create build directory inside the project root
-          mkdir -p "$PROJECT_ROOT/build"
-          
-          # Configure and build
-          cmake -S "$PROJECT_ROOT" -B "$PROJECT_ROOT/build"
-          cmake --build "$PROJECT_ROOT/build"
-          
-          # Run tests
-          "$PROJECT_ROOT/build/test_neural_network"
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build libgtest-dev valgrind
+      - name: Configure and build
+        run: |
+          cmake -S src -B build-valgrind -G Ninja -DCMAKE_BUILD_TYPE=Debug
+          cmake --build build-valgrind --parallel
+      - name: Run Valgrind
+        run: valgrind --leak-check=full --show-leak-kinds=all --errors-for-leak-kinds=all --error-exitcode=1 ./build-valgrind/test_neural_network
 
-      - name: Memory Safety (Valgrind)
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
         run: |
-          # Use the same dynamic path for Valgrind
-          PROJECT_ROOT=$(find . -name "CMakeLists.txt" -exec dirname {} \; | head -n 1)
-          valgrind --leak-check=full --error-exitcode=1 "$PROJECT_ROOT/build/test_neural_network"
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build libgtest-dev lcov
+      - name: Configure and test
+        run: |
+          cmake -S src -B build-coverage -G Ninja -DCMAKE_BUILD_TYPE=Debug -DNN_ENABLE_COVERAGE=ON
+          cmake --build build-coverage --parallel
+          ctest --test-dir build-coverage --output-on-failure
+      - name: Capture coverage
+        run: |
+          lcov --capture --directory build-coverage --output-file coverage.info --ignore-errors mismatch
+          lcov --remove coverage.info '/usr/*' '*/tests/*' --output-file coverage.info --ignore-errors unused
+          lcov --list coverage.info
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-info
+          path: coverage.info
+          if-no-files-found: error
+
+  container:
+    name: Container build and smoke test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build --tag neuralnet-cpp:ci .
+      - name: Smoke test image
+        run: docker run --rm neuralnet-cpp:ci

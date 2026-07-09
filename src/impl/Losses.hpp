@@ -1,7 +1,6 @@
 #pragma once
 #include "../core/Loss.hpp"
 #include <cmath>
-#include <stdexcept>
 
 class MSE : public Loss {
 public:
@@ -32,7 +31,8 @@ public:
         double sum = 0.0;
         for (size_t i = 0; i < y.size(); ++i) {
             double p = std::max(eps, std::min(1.0 - eps, y_hat[i]));
-            sum += -y[i] * std::log(p) - (1.0 - y[i]) * std::log(1.0 - p);
+            sum +=
+                -y[i] * std::log(p) - (1.0 - y[i]) * std::log(1.0 - p);
         }
         return sum / static_cast<double>(y.size());
     }

@@ -1,0 +1,51 @@
+name: Static Analysis
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  clang-format:
+    name: clang-format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format
+      - name: Check formatting
+        run: |
+          find src tests benchmarks -name '*.cpp' -o -name '*.hpp' | xargs clang-format --dry-run --Werror
+
+  clang-tidy:
+    name: clang-tidy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build libgtest-dev clang-tidy
+      - name: Configure
+        run: cmake -S src -B build-tidy -G Ninja -DCMAKE_BUILD_TYPE=Debug
+      - name: Analyze
+        run: run-clang-tidy -p build-tidy src tests
+
+  cppcheck:
+    name: cppcheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install cppcheck
+        run: sudo apt-get update && sudo apt-get install -y cppcheck
+      - name: Analyze
+        run: |
+          cppcheck --enable=warning,style,performance,portability --error-exitcode=1 --std=c++17 \
+            --suppress=missingIncludeSystem \
+            --inline-suppr \
+            src tests
