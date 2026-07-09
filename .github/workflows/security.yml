@@ -54,7 +54,7 @@ jobs:
         with:
           fetch-depth: 0
       - name: Scan for secrets
-        uses: gitleaks/gitleaks-action@v2
+        uses: gitleaks/gitleaks-action@v3
 
   sbom:
     name: Generate SBOM
