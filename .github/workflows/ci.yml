@@ -15,14 +15,23 @@ jobs:
 
       - name: Build and Test
         run: |
-          # Use GITHUB_WORKSPACE to ensure we point to the repo root
-          cmake -S "$GITHUB_WORKSPACE" -B build
-          cmake --build build
+          # Dynamically find the folder containing CMakeLists.txt
+          # This handles the nesting issue by searching the entire workspace
+          PROJECT_ROOT=$(find . -name "CMakeLists.txt" -exec dirname {} \; | head -n 1)
+          echo "Found project root at: $PROJECT_ROOT"
           
-          # Run the test executable
-          ./build/test_neural_network
+          # Create build directory inside the project root
+          mkdir -p "$PROJECT_ROOT/build"
+          
+          # Configure and build
+          cmake -S "$PROJECT_ROOT" -B "$PROJECT_ROOT/build"
+          cmake --build "$PROJECT_ROOT/build"
+          
+          # Run tests
+          "$PROJECT_ROOT/build/test_neural_network"
 
       - name: Memory Safety (Valgrind)
         run: |
-          # Run valgrind to check for memory leaks
-          valgrind --leak-check=full --error-exitcode=1 ./build/test_neural_network
+          # Use the same dynamic path for Valgrind
+          PROJECT_ROOT=$(find . -name "CMakeLists.txt" -exec dirname {} \; | head -n 1)
+          valgrind --leak-check=full --error-exitcode=1 "$PROJECT_ROOT/build/test_neural_network"
