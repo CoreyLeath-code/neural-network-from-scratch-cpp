@@ -1,7 +1,6 @@
 #pragma once
 #include "../core/Loss.hpp"
 #include <cmath>
-#include <stdexcept>
 
 class MSE : public Loss {
 public:
