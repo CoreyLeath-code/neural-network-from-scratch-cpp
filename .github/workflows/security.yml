@@ -61,30 +61,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Generate CycloneDX SBOM
-        uses: CycloneDX/gh-gomod-generate-sbom@v2
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
         with:
-          version: v1
-          args: mod -licenses -json -output sbom.json
-        continue-on-error: true
-      - name: Generate source SBOM fallback
-        if: always()
-        run: |
-          python3 - <<'PY'
-          import json
-          from pathlib import Path
-          files = [str(p) for p in Path('.').rglob('*') if p.is_file() and '.git' not in p.parts]
-          sbom = {
-              'bomFormat': 'CycloneDX',
-              'specVersion': '1.5',
-              'version': 1,
-              'metadata': {'component': {'type': 'application', 'name': 'neural-network-from-scratch-cpp'}},
-              'components': [{'type': 'file', 'name': f} for f in files],
-          }
-          Path('sbom.json').write_text(json.dumps(sbom, indent=2))
-          PY
+          path: .
+          format: cyclonedx-json
+          output-file: sbom.cdx.json
       - name: Upload SBOM
         uses: actions/upload-artifact@v4
         with:
           name: sbom
-          path: sbom.json
+          path: sbom.cdx.json
+          if-no-files-found: error
