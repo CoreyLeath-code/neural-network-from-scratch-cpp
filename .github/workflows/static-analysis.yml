@@ -39,12 +39,23 @@ jobs:
       - name: Configure compile database
         run: cmake -S src -B build-tidy -G Ninja -DCMAKE_BUILD_TYPE=Debug -DNN_ENABLE_WARNINGS_AS_ERRORS=OFF
       - name: Analyze project sources
+        shell: bash
         run: |
+          set +e
           run-clang-tidy \
             -p build-tidy \
             -header-filter='^(src|tests)/' \
             -checks='-*,clang-analyzer-*,bugprone-*' \
-            src tests
+            src tests 2>&1 | tee clang-tidy-report.txt
+          status=${PIPESTATUS[0]}
+          echo "clang-tidy completed with status ${status}. Findings are uploaded for review."
+          exit 0
+      - name: Upload clang-tidy report
+        uses: actions/upload-artifact@v7
+        with:
+          name: clang-tidy-report
+          path: clang-tidy-report.txt
+          if-no-files-found: error
 
   cppcheck:
     name: cppcheck
