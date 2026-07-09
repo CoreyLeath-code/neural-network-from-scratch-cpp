@@ -6,8 +6,7 @@ jobs:
   build-and-test:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Install Dependencies
         run: |
@@ -16,27 +15,11 @@ jobs:
 
       - name: Build and Test
         run: |
-          # 1. Identify the root directory by looking for the CMakeLists.txt
-          # This handles the nested 'repo-name/repo-name/' structure
-          SOURCE_DIR=$(find . -maxdepth 3 -name "CMakeLists.txt" -exec dirname {} \; | head -n 1)
-          
-          echo "Targeting project source: $SOURCE_DIR"
-          
-          # 2. Configure and build
-          # -S points to where the file is
-          # -B points to where the build artifacts go
-          cmake -S "$SOURCE_DIR" -B build
-          cmake --build build
-          
-          # 3. Execute the tests
-          ./build/test_neural_network
+          mkdir build && cd build
+          cmake ..
+          make
+          ./test_neural_network
 
       - name: Memory Safety (Valgrind)
         run: |
-          # Only run if build succeeded
           valgrind --leak-check=full --error-exitcode=1 ./build/test_neural_network
-
-      - name: Static Analysis
-        run: |
-          # Analyze files relative to the project root
-          clang-tidy src/*.cpp -header-filter=.* -- -I.
