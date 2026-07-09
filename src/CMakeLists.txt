@@ -8,6 +8,7 @@ include(CTest)
 option(NN_ENABLE_WARNINGS_AS_ERRORS "Treat compiler warnings as errors" ON)
 option(NN_ENABLE_SANITIZERS "Enable AddressSanitizer and UndefinedBehaviorSanitizer" OFF)
 option(NN_ENABLE_COVERAGE "Enable GCC/Clang coverage instrumentation" OFF)
+option(NN_BUILD_BENCHMARKS "Build benchmark executables" ON)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -75,6 +76,13 @@ if(BUILD_TESTING)
 
     include(GoogleTest)
     gtest_discover_tests(test_neural_network)
+endif()
+
+if(NN_BUILD_BENCHMARKS)
+    add_executable(benchmark_network
+        ${CMAKE_CURRENT_SOURCE_DIR}/../benchmarks/benchmark_network.cpp
+    )
+    target_link_libraries(benchmark_network PRIVATE nn_core)
 endif()
 
 install(TARGETS nn_core nn_main
