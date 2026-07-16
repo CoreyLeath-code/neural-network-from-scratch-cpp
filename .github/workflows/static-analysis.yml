@@ -15,7 +15,7 @@ jobs:
     name: clang-format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install clang-format
         run: sudo apt-get update && sudo apt-get install -y clang-format
       - name: Verify C++ files are parseable by clang-format
@@ -31,7 +31,7 @@ jobs:
     name: clang-tidy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install dependencies
         run: |
           sudo apt-get update
@@ -61,7 +61,7 @@ jobs:
     name: cppcheck
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install cppcheck
         run: sudo apt-get update && sudo apt-get install -y cppcheck
       - name: Analyze
