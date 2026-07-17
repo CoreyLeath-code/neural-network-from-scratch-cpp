@@ -1,11 +1,14 @@
 #pragma once
-#include <vector>
+
+#include "core/Layer.hpp"
+
+namespace nn {
 
 class Loss {
-public:
-    virtual double compute(const std::vector<double>& y,
-                           const std::vector<double>& y_hat) = 0;
-    virtual std::vector<double> gradient(const std::vector<double>& y,
-                                         const std::vector<double>& y_hat) = 0;
-    virtual ~Loss() = default;
+ public:
+  virtual ~Loss() = default;
+  [[nodiscard]] virtual double value(const Vector& prediction, const Vector& target) const = 0;
+  [[nodiscard]] virtual Vector gradient(const Vector& prediction, const Vector& target) const = 0;
 };
+
+}  // namespace nn
