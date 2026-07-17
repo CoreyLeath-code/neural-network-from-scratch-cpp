@@ -1,47 +1,38 @@
 # Architecture
 
-## Purpose
+## Components
 
-This repository demonstrates a small feedforward neural network implemented from scratch in C++17. The goal is educational clarity plus production-style engineering hygiene: deterministic builds, tests, memory checks, static analysis, packaging, and container smoke tests.
-
-## Source Layout
-
-```text
-src/
-  core/       Interface abstractions: Layer, Loss, Activation, NeuralNet
-  impl/       Concrete implementations: DenseLayer, losses, activations
-  main.cpp    Demo executable
-
-tests/        GoogleTest suite
-benchmarks/   Lightweight performance harness
-.github/      CI, security, release, and repository automation
-```
-
-## Runtime Flow
+`NeuralNet` is the composition root and owns an ordered vector of `Layer` implementations plus one
+`Loss`. `DenseLayer` owns flattened row-major weights, biases, and the last input/output cache.
+Activations are immutable strategy objects shared across layers. `CSVLoader` is deliberately outside
+the network so ingestion policy does not leak into numerical code.
 
 ```mermaid
-flowchart LR
-    Input[Input vector] --> Dense1[DenseLayer]
-    Dense1 --> DenseN[Additional layers]
-    DenseN --> Output[Prediction]
-    Output --> Loss[MSE Loss]
-    Loss --> Backprop[Backward pass]
-    Backprop --> Update[Gradient descent update]
+classDiagram
+    class NeuralNet
+    class Layer { <<interface>> }
+    class DenseLayer
+    class Loss { <<interface>> }
+    class MeanSquaredError
+    class Activation { <<interface>> }
+    NeuralNet *-- Layer
+    NeuralNet *-- Loss
+    Layer <|-- DenseLayer
+    Loss <|-- MeanSquaredError
+    DenseLayer o-- Activation
 ```
 
-## Design Principles
+## Invariants
 
-- Keep mathematical operations visible instead of hiding them behind ML frameworks.
-- Prefer deterministic test seeds for reproducible CI behavior.
-- Make build and runtime paths explicit.
-- Treat CI as a product feature, not an afterthought.
-- Add safety rails before adding advanced model features.
+- Layer dimensions are positive and adjacent output/input dimensions match.
+- Inputs, targets, gradients, and learning rates are finite; vector sizes match declared shapes.
+- `backward` requires a preceding `forward` on that layer.
+- Input gradients are computed from the pre-update weights.
+- Seeds are explicit and defaulted, never sourced from ambient global state.
+- Objects own resources through standard containers and smart pointers.
 
-## Extension Points
+## Concurrency
 
-- Add activation-aware layers.
-- Add mini-batch gradient descent.
-- Add Adam optimizer.
-- Add serialization for trained weights.
-- Add SIMD or CUDA acceleration.
-- Add benchmark regression gates.
+Prediction writes the forward cache, so a `NeuralNet` instance is not reentrant or thread-safe.
+Independent instances can run concurrently. A production inference API should separate immutable
+parameters from per-request activation workspaces before sharing a model across threads.
