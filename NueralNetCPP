@@ -1,9 +1,0 @@
-NeuralNetCPP/
-├── main.cpp                 # Entry point
-├── neural_network.cpp       # Core NN implementation
-├── neural_network.h         # Header file for the NN
-├── utils.cpp                # Helpers like activation functions
-├── utils.h
-├── data.csv                 # Input dataset (optional)
-├── Makefile                 # Build instructions
-└── README.md                # Project documentation

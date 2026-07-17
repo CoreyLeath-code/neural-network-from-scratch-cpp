@@ -24,7 +24,7 @@ jobs:
         compiler: [gcc, clang]
     steps:
       - name: Checkout
-        uses: actions/checkout@v7
+        uses: actions/checkout@v4
 
       - name: Install dependencies
         run: |
@@ -42,7 +42,7 @@ jobs:
           fi
 
       - name: Configure
-        run: cmake -S src -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: cmake --build build --parallel
@@ -50,12 +50,24 @@ jobs:
       - name: Test
         run: ctest --test-dir build --output-on-failure
 
+      - name: Benchmark
+        if: matrix.compiler == 'gcc'
+        run: ./build/benchmark_network | tee benchmark-results.json
+
+      - name: Upload benchmark result
+        if: matrix.compiler == 'gcc'
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: benchmark-results.json
+          if-no-files-found: error
+
       - name: Package smoke test
         run: cmake --build build --target package
 
       - name: Upload package
         if: matrix.compiler == 'gcc'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: linux-package
           path: build/*.tar.gz
@@ -65,13 +77,13 @@ jobs:
     name: ASan and UBSan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build libgtest-dev
       - name: Configure
-        run: cmake -S src -B build-sanitized -G Ninja -DCMAKE_BUILD_TYPE=Debug -DNN_ENABLE_SANITIZERS=ON
+        run: cmake -S . -B build-sanitized -G Ninja -DCMAKE_BUILD_TYPE=Debug -DNN_ENABLE_SANITIZERS=ON
       - name: Build
         run: cmake --build build-sanitized --parallel
       - name: Test
@@ -84,14 +96,14 @@ jobs:
     name: Valgrind memory safety
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build libgtest-dev valgrind
       - name: Configure and build
         run: |
-          cmake -S src -B build-valgrind -G Ninja -DCMAKE_BUILD_TYPE=Debug
+          cmake -S . -B build-valgrind -G Ninja -DCMAKE_BUILD_TYPE=Debug
           cmake --build build-valgrind --parallel
       - name: Run Valgrind
         run: valgrind --leak-check=full --show-leak-kinds=all --errors-for-leak-kinds=all --error-exitcode=1 ./build-valgrind/test_neural_network
@@ -100,14 +112,14 @@ jobs:
     name: Coverage
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
       - name: Install dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build libgtest-dev lcov
       - name: Configure and test
         run: |
-          cmake -S src -B build-coverage -G Ninja -DCMAKE_BUILD_TYPE=Debug -DNN_ENABLE_COVERAGE=ON
+          cmake -S . -B build-coverage -G Ninja -DCMAKE_BUILD_TYPE=Debug -DNN_ENABLE_COVERAGE=ON
           cmake --build build-coverage --parallel
           ctest --test-dir build-coverage --output-on-failure
       - name: Capture coverage
@@ -115,8 +127,10 @@ jobs:
           lcov --capture --directory build-coverage --output-file coverage.info --ignore-errors mismatch
           lcov --remove coverage.info '/usr/*' '*/tests/*' --output-file coverage.info --ignore-errors unused
           lcov --list coverage.info
+          coverage=$(lcov --summary coverage.info | awk '/lines/ {gsub("%", "", $2); print $2}')
+          awk -v coverage="$coverage" 'BEGIN { if (coverage + 0 < 90) exit 1 }'
       - name: Upload coverage report
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: coverage-info
           path: coverage.info
@@ -126,7 +140,7 @@ jobs:
     name: Container build and smoke test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
       - name: Build image
         run: docker build --tag neuralnet-cpp:ci .
       - name: Smoke test image

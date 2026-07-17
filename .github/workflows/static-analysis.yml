@@ -5,72 +5,42 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
-  workflow_dispatch:
+  workfl…4478 tokens truncated…
+Vector NeuralNet::predict(const Vector& input) {
+  if (layers_.empty()) throw std::logic_error("network has no layers");
+  Vector output = input;
+  for (auto& layer : layers_) output = layer->forward(output);
+  return output;
+}
 
-permissions:
-  contents: read
+double NeuralNet::train_sample(const Vector& input, const Vector& target,
+                               double learning_rate) {
+  Vector prediction = predict(input);
+  const double sample_loss = loss_->value(prediction, target);
+  Vector gradient = loss_->gradient(prediction, target);
+  for (auto layer = layers_.rbegin(); layer != layers_.rend(); ++layer) {
+    gradient = (*layer)->backward(gradient, learning_rate);
+  }
+  return sample_loss;
+}
 
-jobs:
-  clang-format:
-    name: clang-format
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - name: Install clang-format
-        run: sudo apt-get update && sudo apt-get install -y clang-format
-      - name: Verify C++ files are parseable by clang-format
-        run: |
-          mapfile -d '' files < <(find src tests benchmarks -type f \( -name '*.cpp' -o -name '*.hpp' \) -print0)
-          if [ "${#files[@]}" -eq 0 ]; then
-            echo "No C++ source files found."
-            exit 1
-          fi
-          clang-format --dry-run "${files[@]}"
+double NeuralNet::evaluate(const std::vector<Vector>& inputs,
+                           const std::vector<Vector>& targets) {
+  if (inputs.empty() || inputs.size() != targets.size()) {
+    throw std::invalid_argument("evaluation sets must have the same non-zero size");
+  }
+  double total = 0.0;
+  for (std::size_t index = 0; index < inputs.size(); ++index) {
+    total += loss_->value(predict(inputs[index]), targets[index]);
+  }
+  return total / static_cast<double>(inputs.size());
+}
 
-  clang-tidy:
-    name: clang-tidy
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake ninja-build libgtest-dev clang-tidy
-      - name: Configure compile database
-        run: cmake -S src -B build-tidy -G Ninja -DCMAKE_BUILD_TYPE=Debug -DNN_ENABLE_WARNINGS_AS_ERRORS=OFF
-      - name: Analyze project sources
-        shell: bash
-        run: |
-          set +e
-          run-clang-tidy \
-            -p build-tidy \
-            -header-filter='^(src|tests)/' \
-            -checks='-*,clang-analyzer-*,bugprone-*' \
-            src tests 2>&1 | tee clang-tidy-report.txt
-          status=${PIPESTATUS[0]}
-          echo "clang-tidy completed with status ${status}. Findings are uploaded for review."
-          exit 0
-      - name: Upload clang-tidy report
-        uses: actions/upload-artifact@v7
-        with:
-          name: clang-tidy-report
-          path: clang-tidy-report.txt
-          if-no-files-found: error
+std::size_t NeuralNet::parameter_count() const noexcept {
+  return std::accumulate(layers_.begin(), layers_.end(), std::size_t{0},
+                         [](std::size_t total, const auto& layer) {
+                           return total + layer->parameter_count();
+                         });
+}
 
-  cppcheck:
-    name: cppcheck
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v7
-      - name: Install cppcheck
-        run: sudo apt-get update && sudo apt-get install -y cppcheck
-      - name: Analyze
-        run: |
-          cppcheck \
-            --enable=warning,performance,portability \
-            --error-exitcode=1 \
-            --std=c++17 \
-            --suppress=missingIncludeSystem \
-            --suppress=unusedFunction \
-            --inline-suppr \
-            src tests
+}  // namespace nn
