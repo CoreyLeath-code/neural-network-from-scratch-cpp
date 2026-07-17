@@ -1,38 +1,54 @@
+#include <algorithm>
 #include <chrono>
+#include <cmath>
+#include <cstddef>
+#include <iomanip>
 #include <iostream>
 #include <memory>
+#include <numeric>
 #include <vector>
 
 #include "core/NeuralNet.hpp"
-#include "impl/DenseLayer.hpp"
+#include "impl/Activations.hpp"
 #include "impl/Losses.hpp"
 
+namespace {
+double percentile(const std::vector<double>& sorted, double quantile) {
+  const auto index = static_cast<std::size_t>(std::ceil(quantile * sorted.size())) - 1;
+  return sorted[std::min(index, sorted.size() - 1)];
+}
+}  // namespace
+
 int main() {
-    NeuralNet nn(std::make_unique<MSE>());
-    nn.addLayer(std::make_unique<DenseLayer>(4, 8, 42));
-    nn.addLayer(std::make_unique<DenseLayer>(8, 2, 43));
-
-    const std::vector<double> input{0.2, 0.4, 0.6, 0.8};
-    constexpr int iterations = 100000;
-
-    const auto start = std::chrono::high_resolution_clock::now();
-    for (int i = 0; i < iterations; ++i) {
-        const auto output = nn.forward(input);
-        if (output.empty()) {
-            return 1;
-        }
-    }
-    const auto end = std::chrono::high_resolution_clock::now();
-
-    const auto elapsed_us =
-        std::chrono::duration_cast<std::chrono::microseconds>(end - start)
-            .count();
-    const double avg_ns = static_cast<double>(elapsed_us) * 1000.0 /
-                          static_cast<double>(iterations);
-
-    std::cout << "forward_iterations=" << iterations << '\n';
-    std::cout << "total_us=" << elapsed_us << '\n';
-    std::cout << "avg_forward_ns=" << avg_ns << '\n';
-
-    return 0;
+  constexpr std::size_t kWarmup = 1'000;
+  constexpr std::size_t kIterations = 20'000;
+  nn::NeuralNet network(std::make_unique<nn::MeanSquaredError>());
+  network.add_dense(32, 64, std::make_shared<nn::Relu>(), 7);
+  network.add_dense(64, 16, std::make_shared<nn::Relu>(), 11);
+  network.add_dense(16, 4, std::make_shared<nn::Sigmoid>(), 13);
+  nn::Vector input(32, 0.25);
+  for (std::size_t index = 0; index < kWarmup; ++index) static_cast<void>(network.predict(input));
+  std::vector<double> latency_us;
+  latency_us.reserve(kIterations);
+  const auto overall_start = std::chrono::steady_clock::now();
+  for (std::size_t index = 0; index < kIterations; ++index) {
+    const auto start = std::chrono::steady_clock::now();
+    static_cast<void>(network.predict(input));
+    const auto end = std::chrono::steady_clock::now();
+    latency_us.push_back(std::chrono::duration<double, std::micro>(end - start).count());
+  }
+  const double elapsed = std::chrono::duration<double>(std::chrono::steady_clock::now() - overall_start).count();
+  std::sort(latency_us.begin(), latency_us.end());
+  const double mean = std::accumulate(latency_us.begin(), latency_us.end(), 0.0) / latency_us.size();
+  std::cout << std::fixed << std::setprecision(3)
+            << "{\n  \"iterations\": " << kIterations
+            << ",\n  \"warmup_iterations\": " << kWarmup
+            << ",\n  \"parameters\": " << network.parameter_count()
+            << ",\n  \"latency_us\": {\"min\": " << latency_us.front()
+            << ", \"mean\": " << mean << ", \"median\": " << percentile(latency_us, 0.50)
+            << ", \"p95\": " << percentile(latency_us, 0.95)
+            << ", \"p99\": " << percentile(latency_us, 0.99)
+            << ", \"max\": " << latency_us.back()
+            << "},\n  \"inferences_per_second\": " << kIterations / elapsed << "\n}\n";
+  return 0;
 }
