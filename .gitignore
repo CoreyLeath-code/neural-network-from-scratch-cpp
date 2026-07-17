@@ -40,3 +40,4 @@ _deps/
 .idea/
 .vscode/
 *.user
+.docker-config/
