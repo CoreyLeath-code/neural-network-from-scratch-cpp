@@ -1,0 +1,7 @@
+.git
+.github
+.docker-config
+build*
+.cache
+coverage.info
+*.zip
