@@ -18,7 +18,7 @@ jobs:
     name: CodeQL
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
       - name: Initialize CodeQL
         uses: github/codeql-action/init@v4
         with:
@@ -32,7 +32,7 @@ jobs:
     name: Trivy filesystem scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
       - name: Run Trivy and generate report
         run: |
           docker run --rm \
@@ -44,10 +44,11 @@ jobs:
             --output trivy-results.txt \
             --severity MEDIUM,HIGH,CRITICAL \
             --ignore-unfixed \
-            --exit-code 0 \
+            --exit-code 1 \
             .
       - name: Upload Trivy report
-        uses: actions/upload-artifact@v7
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
           name: trivy-filesystem-report
           path: trivy-results.txt
@@ -57,7 +58,7 @@ jobs:
     name: Gitleaks secret scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
       - name: Scan working tree for secrets
         run: |
           docker run --rm \
@@ -75,7 +76,7 @@ jobs:
     name: Generate SBOM
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@v4
       - name: Generate SBOM
         uses: anchore/sbom-action@v0
         with:
@@ -83,7 +84,7 @@ jobs:
           format: cyclonedx-json
           output-file: sbom.cdx.json
       - name: Upload SBOM
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@v4
         with:
           name: sbom
           path: sbom.cdx.json
