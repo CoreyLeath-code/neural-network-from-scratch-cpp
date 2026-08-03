@@ -33,7 +33,14 @@ const Vector& DenseLayer::forward(const Vector& input) {
       if (!std::isfinite(input[input_index])) throw std::invalid_argument("dense input must be finite");
       sum += weights_[output * input_size_ + input_index] * input[input_index];
     }
-    last_output_[output] = activation_->forward(sum);
+    if (!std::isfinite(sum)) {
+      throw std::overflow_error("dense pre-activation must be finite");
+    }
+    const double activated = activation_->forward(sum);
+    if (!std::isfinite(activated)) {
+      throw std::overflow_error("dense activation must be finite");
+    }
+    last_output_[output] = activated;
   }
   has_forward_cache_ = true;
   return last_output_;
@@ -50,16 +57,37 @@ Vector DenseLayer::backward(const Vector& output_gradient, double learning_rate)
   for (std::size_t output = 0; output < output_size_; ++output) {
     if (!std::isfinite(output_gradient[output])) throw std::invalid_argument("gradient must be finite");
     deltas[output] = output_gradient[output] * activation_->derivative_from_output(last_output_[output]);
+    if (!std::isfinite(deltas[output])) {
+      throw std::overflow_error("layer delta must be finite");
+    }
     for (std::size_t input = 0; input < input_size_; ++input) {
       input_gradient[input] += weights_[output * input_size_ + input] * deltas[output];
+      if (!std::isfinite(input_gradient[input])) {
+        throw std::overflow_error("input gradient must be finite");
+      }
     }
   }
+
+  Vector updated_weights = weights_;
+  Vector updated_biases = biases_;
   for (std::size_t output = 0; output < output_size_; ++output) {
     for (std::size_t input = 0; input < input_size_; ++input) {
-      weights_[output * input_size_ + input] -= learning_rate * deltas[output] * last_input_[input];
+      const std::size_t index = output * input_size_ + input;
+      const double update = learning_rate * deltas[output] * last_input_[input];
+      const double proposed = weights_[index] - update;
+      if (!std::isfinite(update) || !std::isfinite(proposed)) {
+        throw std::overflow_error("weight update must be finite");
+      }
+      updated_weights[index] = proposed;
     }
-    biases_[output] -= learning_rate * deltas[output];
+    const double proposed_bias = biases_[output] - learning_rate * deltas[output];
+    if (!std::isfinite(proposed_bias)) {
+      throw std::overflow_error("bias update must be finite");
+    }
+    updated_biases[output] = proposed_bias;
   }
+  weights_ = std::move(updated_weights);
+  biases_ = std::move(updated_biases);
   return input_gradient;
 }
 
