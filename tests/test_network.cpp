@@ -3,6 +3,7 @@
 #include <fstream>
 #include <limits>
 #include <memory>
+#include <stdexcept>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -14,6 +15,13 @@
 #include "impl/Losses.hpp"
 
 namespace {
+
+class IdentityActivation final : public nn::Activation {
+ public:
+  [[nodiscard]] double forward(double value) const noexcept override { return value; }
+  [[nodiscard]] double derivative_from_output(double) const noexcept override { return 1.0; }
+  [[nodiscard]] std::string_view name() const noexcept override { return "identity"; }
+};
 
 TEST(Activations, AreNumericallyStableAndDifferentiable) {
   nn::Sigmoid sigmoid;
@@ -65,6 +73,19 @@ TEST(DenseLayer, BackwardRequiresCacheAndUpdatesWeights) {
   EXPECT_NE(before, layer.weights());
   EXPECT_THROW(layer.backward({}, 0.1), std::invalid_argument);
   EXPECT_THROW(layer.backward({1.0}, 0.0), std::invalid_argument);
+}
+
+TEST(DenseLayer, RejectsOverflowingUpdatesWithoutMutatingParameters) {
+  auto activation = std::make_shared<IdentityActivation>();
+  nn::DenseLayer layer(1, 1, activation, 4);
+  const double large_finite_input = std::numeric_limits<double>::max() / 4.0;
+  static_cast<void>(layer.forward({large_finite_input}));
+  const auto weights_before = layer.weights();
+  const auto biases_before = layer.biases();
+
+  EXPECT_THROW(layer.backward({1.0}, 8.0), std::overflow_error);
+  EXPECT_EQ(layer.weights(), weights_before);
+  EXPECT_EQ(layer.biases(), biases_before);
 }
 
 TEST(NeuralNet, ValidatesTopologyAndLifecycle) {
