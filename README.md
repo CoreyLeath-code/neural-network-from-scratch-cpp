@@ -188,14 +188,44 @@ The repository favors commands and artifacts that can be rerun over hand-entered
 CI also uploads benchmark JSON, coverage data, generated packages, scanner output where configured, and
 SBOM artifacts so evidence can be associated with a specific workflow run and commit.
 
+## Research questions and evaluation objectives
+
+The repository treats benchmarking as an experiment with explicit questions rather than as a source of
+marketing numbers. The current evidence is intended to answer a narrow set of engineering questions:
+
+1. **Correctness:** does the implementation satisfy deterministic unit, negative, lifecycle, and XOR
+   regression checks under the tested configuration?
+2. **Numerical safety:** are malformed inputs, non-finite values, invalid dimensions, invalid learning
+   rates, and overflowing parameter updates rejected instead of silently mutating state?
+3. **Memory safety:** does the tested implementation complete under ASan, UBSan, and Valgrind without a
+   blocking finding?
+4. **Reproducibility:** can another engineer rebuild the same commit, execute the same test and benchmark
+   protocol, and obtain the same qualitative outcome even when wall-clock timings differ?
+5. **Performance characterization:** what latency distribution and aggregate throughput does the current
+   scalar implementation produce for one fixed benchmark topology on one documented environment?
+
+These questions deliberately avoid claims about real-world predictive accuracy, generalization,
+classification quality, GPU scalability, distributed training, or production serving because those
+capabilities are outside the implemented scope.
+
 ## Research-style benchmark contract
 
-The benchmark constructs a deterministic `32-64-16-4` network, executes **1,000 untimed warmup
-inferences**, and then records **20,000 timed inference calls** using `std::chrono::steady_clock`.
-Output includes:
+The benchmark constructs a deterministic `32-64-16-4` network with fixed seeds `7`, `11`, and `13`.
+That topology contains **3,220 trainable parameters** including biases. The benchmark executes **1,000
+untimed warmup inferences** and then records **20,000 timed inference calls** using
+`std::chrono::steady_clock`.
 
+The timed output contains:
+
+- benchmark iteration count;
+- warmup iteration count;
 - parameter count;
-- minimum, mean, median, P95, P99, and maximum latency in microseconds;
+- minimum latency in microseconds;
+- arithmetic mean latency in microseconds;
+- median latency in microseconds;
+- P95 latency in microseconds;
+- P99 latency in microseconds;
+- maximum latency in microseconds;
 - aggregate inferences per second.
 
 Example command:
@@ -210,6 +240,191 @@ runners. Compare runs only when the environment and benchmark protocol are mater
 
 See [`docs/benchmarks.md`](docs/benchmarks.md) and
 [`benchmarks/benchmark_report.md`](benchmarks/benchmark_report.md).
+
+## Metric definitions and interpretation
+
+| Metric | Definition in this repository | What it supports | What it does **not** prove |
+| --- | --- | --- | --- |
+| MSE | Mean of squared element-wise prediction errors | Training/evaluation behavior for the implemented objective | Classification calibration, robustness, or task suitability |
+| Median latency | 50th percentile of sorted per-call inference latency | Typical latency for the benchmark process | Cross-machine latency equivalence |
+| P95 latency | 95th percentile of sorted per-call latency | Upper-tail behavior for most calls | Hard real-time guarantees |
+| P99 latency | 99th percentile of sorted per-call latency | High-tail behavior under the measured run | Worst-case latency across systems |
+| Throughput | `iterations / elapsed_seconds` | Aggregate benchmark inference rate | Multi-user service capacity |
+| Parameter count | Sum of layer weights and biases | Model-size transparency | Memory footprint of an optimized tensor runtime |
+| Line coverage | Covered instrumented lines divided by instrumented lines | Test execution breadth under CI instrumentation | Semantic correctness or branch completeness |
+| Test pass/fail | GoogleTest/CTest contract | Regression confidence for encoded cases | Proof over all possible inputs |
+
+For the implemented MSE objective, a prediction vector `y_hat` and target vector `y` of length `n` are
+scored as:
+
+```text
+MSE = (1 / n) * sum((y_hat[i] - y[i])^2)
+```
+
+Latency percentiles are selected from the sorted set of individual timed calls. Throughput is computed
+from the total timed iteration count divided by the benchmark's elapsed steady-clock duration.
+
+## Correctness metrics currently encoded in tests
+
+The test suite contains concrete thresholds that are stronger evidence than a hand-written README claim.
+The deterministic XOR regression trains a `2-4-1` network for **8,000 epochs** with learning rate
+`0.25` and checks all of the following:
+
+| Check | Encoded criterion |
+| --- | --- |
+| Final XOR evaluation loss | `< 0.02` |
+| Relative loss improvement | Final loss `< initial_loss / 5` |
+| Prediction for `(0,0)` | `< 0.2` |
+| Prediction for `(0,1)` | `> 0.8` |
+| Prediction for `(1,0)` | `> 0.8` |
+| Prediction for `(1,1)` | `< 0.2` |
+
+These values are regression thresholds for one deterministic educational problem. They must not be
+reframed as accuracy, precision, recall, F1, ROC-AUC, or generalization metrics.
+
+The suite also checks activation numerical behavior, MSE and gradient calculation, deterministic
+initialization, topology validation, backward-pass lifecycle rules, overflow rejection without
+parameter mutation, and strict CSV parsing behavior.
+
+## Experimental controls
+
+A research-style comparison should keep the following variables fixed or record them explicitly:
+
+| Control | Record before comparing runs |
+| --- | --- |
+| Source | Commit SHA and tag, if any |
+| Compiler | Compiler family and exact version |
+| Build | Build type and relevant CMake flags |
+| CPU | Model, architecture, logical core count, and frequency policy where available |
+| OS | Distribution/version and kernel |
+| Container | Image digest when benchmarking inside a container |
+| Topology | Layer widths, activations, and parameter count |
+| Seeds | Initialization seeds |
+| Input | Input width, value construction, and batch size |
+| Warmup | Warmup count |
+| Timed sample | Timed iteration count |
+| Concurrency | Thread/process count |
+| Background load | Whether the host was dedicated or shared |
+
+If one of these materially changes, treat the result as a different experiment rather than a direct
+performance regression comparison.
+
+## Reproducibility protocol
+
+### 1. Capture the source identity
+
+```bash
+git rev-parse HEAD
+git status --short
+git describe --tags --always --dirty
+```
+
+A reproducible result should come from a clean worktree. If the worktree is dirty, record the diff or do
+not present the result as evidence for the referenced commit.
+
+### 2. Capture the toolchain
+
+```bash
+cmake --version
+c++ --version
+uname -a
+```
+
+On Linux, CPU information can also be captured with:
+
+```bash
+lscpu
+```
+
+### 3. Rebuild from a clean directory
+
+```bash
+rm -rf build
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --parallel
+ctest --test-dir build --output-on-failure
+```
+
+### 4. Run the benchmark and preserve raw output
+
+```bash
+mkdir -p benchmark-runs
+./build/benchmark_network | tee benchmark-runs/run-01.json
+sha256sum benchmark-runs/run-01.json
+```
+
+### 5. Optional repeated-run protocol
+
+Because wall-clock timing contains noise, repeated process-level runs are more informative than one
+isolated run when comparing environments:
+
+```bash
+mkdir -p benchmark-runs
+for run in 01 02 03 04 05; do
+  ./build/benchmark_network > "benchmark-runs/run-${run}.json"
+done
+sha256sum benchmark-runs/*.json
+```
+
+The benchmark program itself reports per-call median, P95, and P99 values for each process run. The
+repository does not currently compute cross-run confidence intervals or a formal statistical significance
+test. Do not invent one in reports. If statistical regression gating is added later, the methodology,
+sample count, alpha level, effect-size threshold, and runner stability requirements should be documented
+before the gate is enforced.
+
+## Reproducibility levels
+
+| Level | Evidence | Current status |
+| --- | --- | --- |
+| Source reproducibility | Commit/tag identifies exact source | Supported by Git/GitHub |
+| Build reproducibility | Documented CMake build path | Supported, but binaries are not claimed bit-for-bit identical across toolchains |
+| Algorithm reproducibility | Fixed initialization seeds and deterministic XOR ordering | Supported for the encoded paths |
+| Test reproducibility | Deterministic GoogleTest/CTest contracts | Supported |
+| Benchmark protocol reproducibility | Fixed topology, seeds, warmup, iterations, and JSON schema | Supported |
+| Timing reproducibility | Identical absolute latency across machines/runs | **Not claimed** |
+| Artifact traceability | CPack archive + checksum + release workflow | Supported by release automation |
+| Scientific generalization | Representative external dataset validation | **Not implemented** |
+
+## Benchmark reporting template
+
+When publishing a benchmark result in an issue, PR, release note, portfolio review, or research log, use
+a record similar to the following instead of quoting an isolated latency number:
+
+```text
+Benchmark: benchmark_network
+Commit: <full SHA>
+Tag: <tag or none>
+Date: <UTC timestamp>
+Compiler: <name and version>
+Build type: Release
+CMake flags: <flags>
+OS/kernel: <environment>
+CPU: <model>
+Topology: 32-64-16-4
+Parameters: 3220
+Seeds: 7, 11, 13
+Warmup iterations: 1000
+Timed iterations: 20000
+Process runs: <count>
+Concurrency: 1 process / implementation default
+Raw artifact: <path or CI artifact>
+SHA256: <checksum>
+Interpretation: <what changed and what did not>
+```
+
+This format makes the provenance of a number visible and discourages comparisons between unlike
+machines, compilers, builds, or benchmark definitions.
+
+## Metrics that are intentionally not claimed
+
+The current repository does **not** report precision, recall, F1, ROC-AUC, PR-AUC, calibration error,
+confusion matrices, MAP, MRR, NDCG, GPU utilization, distributed scaling efficiency, service availability,
+request concurrency, or production SLO attainment. Those metrics require workloads and systems that this
+repository does not implement.
+
+Adding a metric requires all of the following: an implemented workload for which the metric is meaningful,
+a documented evaluation protocol, source/data provenance, a reproduction command, and an artifact tied to
+a commit or release. A visually impressive number without that evidence is intentionally excluded.
 
 ## Correctness evidence
 
@@ -259,6 +474,97 @@ ghcr.io/coreyleath-code/neural-network-from-scratch-cpp:<release-tag>
 
 Release publication is an engineering distribution mechanism; it does not upgrade the implementation's
 scientific scope or remove the limitations documented below.
+
+## Research and engineering Q&A
+
+### Why call this a "from scratch" neural network?
+
+The forward pass, dense-layer math, activation functions, MSE loss, analytic gradient flow,
+backpropagation, parameter updates, topology checks, and model ownership are implemented directly in C++.
+The project does not delegate the neural-network algorithm to a tensor or ML framework. GoogleTest,
+CMake, CI scanners, and container tooling are engineering infrastructure rather than substitutes for the
+network implementation.
+
+### Does the 90% coverage badge mean the model is 90% accurate?
+
+No. The coverage gate is **line coverage**, meaning CI requires at least 90% of instrumented source lines
+to be executed by the test suite. It is not a prediction-quality metric and says nothing about accuracy,
+precision, recall, or generalization.
+
+### Why does the project use MSE instead of cross-entropy?
+
+MSE is the loss function currently implemented and tested. It keeps the initial educational scope small
+and makes the analytic gradient easy to inspect. Stable softmax/cross-entropy support is a roadmap item
+and should be accompanied by numerical gradient checks before being promoted as implemented evidence.
+
+### Why not publish a single "inference speed" number in the README?
+
+Absolute timing from a shared CI runner is not portable. CPU model, contention, compiler version, build
+flags, operating system, and frequency policy can materially change results. The repository therefore
+publishes a reproducible benchmark **protocol** and raw JSON rather than treating one machine's latency as
+a universal performance claim.
+
+### Why report median, P95, and P99 instead of only the mean?
+
+The mean summarizes all measured calls but can be influenced by outliers. Median describes the center of
+the observed latency distribution, while P95 and P99 expose increasingly high-tail behavior. Reporting
+all of them gives more context without pretending the benchmark is a production SLO test.
+
+### Is the benchmark deterministic?
+
+The benchmark's topology, input construction, and initialization seeds are fixed, so the computational
+workload is deterministic. Wall-clock timing is not deterministic because the operating system, CPU,
+background load, thermal state, and scheduler introduce noise.
+
+### What would count as a fair performance comparison?
+
+A fair comparison keeps the source commit, compiler/toolchain, build flags, hardware class, operating
+system, benchmark topology, seeds, input, warmup count, timed iteration count, and concurrency equivalent.
+If those conditions differ, report the results as separate experiments rather than a percentage speedup.
+
+### Does passing XOR prove backpropagation is correct for every network?
+
+No. The XOR test is a deterministic end-to-end regression signal that verifies one useful learning path.
+It does not prove every partial derivative for every topology. Finite-difference gradient checks across
+multiple shapes are the next stronger correctness test identified by the audit and roadmap.
+
+### Why are accuracy, F1, and ROC-AUC absent?
+
+There is no representative classification dataset and evaluation protocol in the current scope. Adding
+those metrics without a meaningful task, split strategy, and dataset provenance would create false
+precision. The README therefore documents what is measured and explicitly lists what is not measured.
+
+### Is this production-ready?
+
+The repository demonstrates production-style **engineering controls** such as CI, sanitizers, coverage,
+static analysis, security scanning, packaging, release automation, checksums, SBOM generation, and a
+non-root container. That is different from claiming the neural-network implementation is production-ready
+for a real ML workload. Serialization, batching, concurrency-safe inference state, checkpointing,
+representative model validation, and service-level operational controls remain outside the current scope.
+
+### What makes a benchmark result reproducible enough to cite?
+
+At minimum, record the commit SHA, toolchain, build flags, OS, CPU, topology, seeds, warmup count, timed
+iteration count, concurrency, raw JSON artifact, and checksum. A result without that context may still be
+useful for local debugging, but it should not be presented as durable research evidence.
+
+### Why use checksums for release and benchmark artifacts?
+
+A checksum provides a compact integrity reference for a particular file. It does not establish authorship
+or independently prove supply-chain trust, but it helps verify that the file being analyzed or distributed
+matches the recorded artifact bytes.
+
+### What would justify adding formal performance regression gates?
+
+The project would first need a sufficiently stable runner, a history of repeated comparable measurements,
+a documented statistical method, an agreed practical effect-size threshold, and controls for benchmark
+protocol changes. Until then, the benchmark remains observational rather than a hard latency gate.
+
+### How should reviewers interpret roadmap items?
+
+Roadmap entries are planned directions, not hidden capabilities. They should only move into the
+implemented-scope and evidence sections after code, tests, evaluation commands, and reproducible artifacts
+exist on the repository's main branch.
 
 ## Engineering guarantees and limitations
 
