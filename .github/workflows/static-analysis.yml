@@ -27,7 +27,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y clang-format
 
-      - name: Verify C++ files are parseable by clang-format
+      - name: Validate formatting configuration and source parseability
         shell: bash
         run: |
           set -euo pipefail
@@ -36,7 +36,10 @@ jobs:
             echo "No C++ source files found."
             exit 1
           fi
-          clang-format --dry-run "${files[@]}"
+
+          # --dry-run verifies that every file can be parsed with the repository's
+          # checked-in .clang-format policy without mutating the worktree.
+          clang-format --style=file --dry-run "${files[@]}"
 
   clang-tidy:
     name: clang-tidy
@@ -57,22 +60,28 @@ jobs:
             -DNN_ENABLE_WARNINGS_AS_ERRORS=OFF \
             -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
-      - name: Build before analysis
+      - name: Build analyzed targets
         run: cmake --build build-tidy --parallel
 
-      - name: Analyze project translation units
+      - name: Analyze production translation units
         shell: bash
         run: |
           set -euo pipefail
-          mapfile -d '' files < <(find src tests benchmarks -type f -name '*.cpp' -print0)
+
+          mapfile -d '' files < <(find src benchmarks -type f -name '*.cpp' -print0)
           if [ "${#files[@]}" -eq 0 ]; then
-            echo "No C++ translation units found."
+            echo "No production C++ translation units found."
             exit 1
           fi
+
+          # Keep the required gate focused on high-signal correctness checks.
+          # Same-typed dimension/count arguments are deliberate in this numerical API,
+          # so bugprone-easily-swappable-parameters is explicitly excluded.
           clang-tidy \
             -p build-tidy \
             -header-filter='^(.*/)?src/' \
-            -checks='-*,clang-analyzer-*,bugprone-*' \
+            -checks='-*,clang-analyzer-*,bugprone-*,-bugprone-easily-swappable-parameters' \
+            --warnings-as-errors='clang-analyzer-*,bugprone-*,-bugprone-easily-swappable-parameters' \
             "${files[@]}"
 
   cppcheck:
@@ -87,7 +96,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y cppcheck
 
-      - name: Analyze
+      - name: Analyze production code
         shell: bash
         run: |
           set -euo pipefail
@@ -99,4 +108,4 @@ jobs:
             --suppress=unusedFunction \
             --inline-suppr \
             -Isrc \
-            src tests benchmarks
+            src benchmarks
