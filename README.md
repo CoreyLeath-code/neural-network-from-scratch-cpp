@@ -9,12 +9,30 @@
 </p>
 
 <p align="center">
-  <img alt="C++17" src="https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus">
-  <img alt="CMake" src="https://img.shields.io/badge/build-CMake-064F8C?logo=cmake">
-  <img alt="Coverage policy" src="https://img.shields.io/badge/coverage-90%25%20required-brightgreen">
-  <img alt="Sanitizers" src="https://img.shields.io/badge/ASan%20%7C%20UBSan-required-success">
-  <img alt="Container" src="https://img.shields.io/badge/container-non--root-2496ED?logo=docker">
+  <a href="https://github.com/CoreyLeath-code/neural-network-from-scratch-cpp/blob/main/CMakeLists.txt"><img alt="C++17" src="https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus"></a>
+  <a href="https://github.com/CoreyLeath-code/neural-network-from-scratch-cpp/blob/main/CMakeLists.txt"><img alt="CMake 3.16+" src="https://img.shields.io/badge/CMake-3.16%2B-064F8C?logo=cmake"></a>
+  <a href="https://github.com/CoreyLeath-code/neural-network-from-scratch-cpp/blob/main/tests/test_network.cpp"><img alt="GoogleTest" src="https://img.shields.io/badge/tests-GoogleTest-34A853"></a>
+  <a href="https://github.com/CoreyLeath-code/neural-network-from-scratch-cpp/blob/main/.github/workflows/ci.yml"><img alt="Coverage >=90%" src="https://img.shields.io/badge/line%20coverage-%E2%89%A590%25-brightgreen"></a>
+  <a href="https://github.com/CoreyLeath-code/neural-network-from-scratch-cpp/blob/main/.github/workflows/ci.yml"><img alt="ASan + UBSan" src="https://img.shields.io/badge/ASan%20%2B%20UBSan-enforced-success"></a>
+  <a href="https://github.com/CoreyLeath-code/neural-network-from-scratch-cpp/blob/main/.github/workflows/ci.yml"><img alt="Valgrind" src="https://img.shields.io/badge/Valgrind-error--exitcode%3D1-success"></a>
+</p>
+
+<p align="center">
+  <a href="https://github.com/CoreyLeath-code/neural-network-from-scratch-cpp/blob/main/.github/workflows/security.yml"><img alt="Trivy" src="https://img.shields.io/badge/Trivy-MEDIUM%20%7C%20HIGH%20%7C%20CRITICAL-1904DA"></a>
+  <a href="https://github.com/CoreyLeath-code/neural-network-from-scratch-cpp/blob/main/.github/workflows/security.yml"><img alt="Gitleaks" src="https://img.shields.io/badge/Gitleaks-enforced-blueviolet"></a>
+  <a href="https://github.com/CoreyLeath-code/neural-network-from-scratch-cpp/blob/main/.github/workflows/security.yml"><img alt="CycloneDX SBOM" src="https://img.shields.io/badge/SBOM-CycloneDX-informational"></a>
+  <a href="https://github.com/CoreyLeath-code/neural-network-from-scratch-cpp/blob/main/CMakeLists.txt"><img alt="CPack TGZ" src="https://img.shields.io/badge/package-CPack%20TGZ-blue"></a>
+  <a href="https://github.com/CoreyLeath-code/neural-network-from-scratch-cpp/blob/main/Dockerfile"><img alt="Ubuntu 26.04" src="https://img.shields.io/badge/runtime-Ubuntu%2026.04-E95420?logo=ubuntu"></a>
+  <a href="https://github.com/CoreyLeath-code/neural-network-from-scratch-cpp/blob/main/Dockerfile"><img alt="Non-root UID 10001" src="https://img.shields.io/badge/container-non--root%20UID%2010001-2496ED?logo=docker"></a>
   <img alt="License" src="https://img.shields.io/github/license/CoreyLeath-code/neural-network-from-scratch-cpp">
+</p>
+
+<p align="center">
+  <a href="https://github.com/CoreyLeath-code/neural-network-from-scratch-cpp/blob/main/benchmarks/benchmark_network.cpp"><img alt="Benchmark topology" src="https://img.shields.io/badge/benchmark-32--64--16--4-6f42c1"></a>
+  <a href="https://github.com/CoreyLeath-code/neural-network-from-scratch-cpp/blob/main/benchmarks/benchmark_network.cpp"><img alt="3220 parameters" src="https://img.shields.io/badge/parameters-3%2C220-6f42c1"></a>
+  <a href="https://github.com/CoreyLeath-code/neural-network-from-scratch-cpp/blob/main/benchmarks/benchmark_network.cpp"><img alt="1000 warmups" src="https://img.shields.io/badge/warmup-1%2C000%20calls-6f42c1"></a>
+  <a href="https://github.com/CoreyLeath-code/neural-network-from-scratch-cpp/blob/main/benchmarks/benchmark_network.cpp"><img alt="20000 timed calls" src="https://img.shields.io/badge/timed-20%2C000%20calls-6f42c1"></a>
+  <a href="https://github.com/CoreyLeath-code/neural-network-from-scratch-cpp/blob/main/CMakeLists.txt"><img alt="Version 1.0.0" src="https://img.shields.io/badge/version-1.0.0-blue"></a>
 </p>
 
 A compact feed-forward neural network implemented with the C++17 standard library—without a tensor or
