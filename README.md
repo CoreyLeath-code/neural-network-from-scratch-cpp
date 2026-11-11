@@ -1,5 +1,11 @@
 # Neural Network from Scratch in C++
 
+<!-- portfolio-lifecycle-badges:start -->
+[![Latest release](https://img.shields.io/github/v/release/CoreyLeath-code/neural-network-from-scratch-cpp?display_name=tag&sort=semver)](https://github.com/CoreyLeath-code/neural-network-from-scratch-cpp/releases/latest)
+[![Lifecycle documentation](https://img.shields.io/badge/lifecycle-documented-2563eb)](#ownership-promotion-and-operational-lifecycle)
+[![Maintainer](https://img.shields.io/badge/maintainer-Corey%20Leath-111827)](https://github.com/CoreyLeath-code)
+<!-- portfolio-lifecycle-badges:end -->
+
 <p align="center">
   <a href="https://github.com/CoreyLeath-code/neural-network-from-scratch-cpp/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/CoreyLeath-code/neural-network-from-scratch-cpp/actions/workflows/ci.yml/badge.svg"></a>
   <a href="https://github.com/CoreyLeath-code/neural-network-from-scratch-cpp/actions/workflows/static-analysis.yml"><img alt="Static Analysis" src="https://github.com/CoreyLeath-code/neural-network-from-scratch-cpp/actions/workflows/static-analysis.yml/badge.svg"></a>
