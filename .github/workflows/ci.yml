@@ -110,7 +110,9 @@ jobs:
 
   coverage:
     name: Coverage
-    runs-on: ubuntu-latest
+    # Pin coverage instrumentation to Ubuntu 24.04: GCC 15 + lcov 2.4 on
+    # ubuntu-latest reports inconsistent GoogleTest constructor line mappings.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Install dependencies
